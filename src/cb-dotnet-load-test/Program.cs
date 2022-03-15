@@ -8,24 +8,8 @@ using NBomber.CSharp;
 IBucket? _bucket = null;
 ICouchbaseCollection? _collection = null;
 var bucketName = "PerfTesting";
+var _cluster = await CreateCluster();
 
-//setup database connection
-var cluster = await Cluster.ConnectAsync("couchbase://localhost", options =>
-{
-    options.WithCredentials("Administrator", "password");
-    options.NumKvConnections = 4;
-    options.MaxKvConnections = 4;
-    options.Experiments.ChannelConnectionPools = false;
-    options.WithTracing(new Couchbase.Core.Diagnostics.Tracing.TracingOptions() { Enabled = false });
-    options.WithLoggingMeterOptions(new Couchbase.Core.Diagnostics.Metrics.LoggingMeterOptions().Enabled(false));
-    options.WithOrphanTracing(new Couchbase.Core.Diagnostics.Tracing.OrphanResponseReporting.OrphanOptions() { Enabled = false });
-    options.EnableDnsSrvResolution = false;
-    options.Transcoder = new RawJsonTranscoder();
-    options.Tuning = new TuningOptions
-    {
-        MaximumRetainedOperationBuilders = Environment.ProcessorCount * 16
-    };
-});
 
 //setup data for insert
 var sb = new System.Text.StringBuilder("{\n");
@@ -47,7 +31,11 @@ var step = Step.Create(
 {
     try
     {
-        if (_collection != null)
+        if (_cluster == null || _collection == null) 
+	    {
+            return Response.Fail();
+        }
+        else if (_collection != null)
         {
             await PopuplateDatabase(json, _collection);
         }
@@ -55,6 +43,12 @@ var step = Step.Create(
     catch (System.Exception ex) 
     {
         context.Logger.Error($"{ex.Message} - {ex.StackTrace}");
+
+        //try to recover from failure
+        _cluster.Dispose();
+        _cluster = null;
+        _cluster = await CreateCluster();
+
         return Response.Fail();
     }
     return Response.Ok();
@@ -64,10 +58,10 @@ var step = Step.Create(
 var scenario = ScenarioBuilder
     .CreateScenario("Test Couchbase", step)
     .WithLoadSimulations(new[] {
-        Simulation.RampConstant(copies: 1, during: TimeSpan.FromSeconds(5)),
-        Simulation.KeepConstant(copies: 10000, during: TimeSpan.FromSeconds(60)),
-        Simulation.InjectPerSec(rate: 10, during: TimeSpan.FromSeconds(30)),
-        Simulation.InjectPerSecRandom(minRate: 100, maxRate: 200, during: TimeSpan.FromSeconds(10))
+        Simulation.RampConstant(copies: 1000, during: TimeSpan.FromSeconds(10)),
+        Simulation.KeepConstant(copies: 1001, during: TimeSpan.FromSeconds(10)),
+        Simulation.InjectPerSec(rate: 100, during: TimeSpan.FromSeconds(10)),
+        Simulation.InjectPerSecRandom(minRate: 1002, maxRate: 1300, during: TimeSpan.FromSeconds(40))
     })
     .WithInit(async context => { await CreateBucket(); });
 
@@ -77,7 +71,8 @@ NBomberRunner.RegisterScenarios(scenario)
 
 //clean up resources
 _bucket?.Dispose();
-cluster.Dispose();
+_cluster.Dispose();
+
 
 //work to do
 async Task PopuplateDatabase(string json, ICouchbaseCollection collection)
@@ -85,12 +80,37 @@ async Task PopuplateDatabase(string json, ICouchbaseCollection collection)
     await collection.UpsertAsync($"{System.Guid.NewGuid()}", json);
 }
 
+
+//init cluster
+async Task<ICluster> CreateCluster()
+{
+    //setup database connection
+    var cluster = await Cluster.ConnectAsync("couchbase://localhost", options =>
+    {
+        options.WithCredentials("Administrator", "password");
+        options.NumKvConnections = 4;
+        options.MaxKvConnections = 4;
+        options.Experiments.ChannelConnectionPools = false;
+        options.WithTracing(new Couchbase.Core.Diagnostics.Tracing.TracingOptions() { Enabled = false });
+        options.WithLoggingMeterOptions(new Couchbase.Core.Diagnostics.Metrics.LoggingMeterOptions().Enabled(false));
+        options.WithOrphanTracing(new Couchbase.Core.Diagnostics.Tracing.OrphanResponseReporting.OrphanOptions() { Enabled = false });
+        options.EnableDnsSrvResolution = false;
+        options.Transcoder = new RawJsonTranscoder();
+        options.Tuning = new TuningOptions
+        {
+            MaximumRetainedOperationBuilders = Environment.ProcessorCount * 16
+        };
+    });
+
+    return cluster;
+}
+
 //init bucket
 async Task CreateBucket()
 {
-    if (cluster != null)
+    if (_cluster != null)
     {
-        await cluster.Buckets.DropBucketAsync("PerfTesting");
+        await _cluster.Buckets.DropBucketAsync("PerfTesting");
         await Task.Delay(5000);
         var bucketSettings = new BucketSettings
         {
@@ -99,9 +119,9 @@ async Task CreateBucket()
             RamQuotaMB = 1024
         };
 
-        await cluster.Buckets.CreateBucketAsync(bucketSettings);
+        await _cluster.Buckets.CreateBucketAsync(bucketSettings);
         await Task.Delay(5000);
-        _bucket = await cluster.BucketAsync(bucketName);
+        _bucket = await _cluster.BucketAsync(bucketName);
         _collection = await _bucket.DefaultCollectionAsync();
     }
 }
