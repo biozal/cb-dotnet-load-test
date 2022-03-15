@@ -59,7 +59,7 @@ var scenario = ScenarioBuilder
     .CreateScenario("Test Couchbase", step)
     .WithLoadSimulations(new[] {
         Simulation.RampConstant(copies: 1000, during: TimeSpan.FromSeconds(10)),
-        Simulation.KeepConstant(copies: 1001, during: TimeSpan.FromSeconds(10)),
+        Simulation.KeepConstant(copies: 1001, during: TimeSpan.FromSeconds(20)),
         Simulation.InjectPerSec(rate: 100, during: TimeSpan.FromSeconds(10)),
         Simulation.InjectPerSecRandom(minRate: 400, maxRate: 800, during: TimeSpan.FromSeconds(40))
     })
