@@ -65,7 +65,7 @@ var scenario = ScenarioBuilder
     .CreateScenario("Test Couchbase", step)
     .WithLoadSimulations(new[] {
         Simulation.RampConstant(copies: 1, during: TimeSpan.FromSeconds(5)),
-        Simulation.KeepConstant(copies: 100, during: TimeSpan.FromSeconds(60)),
+        Simulation.KeepConstant(copies: 10000, during: TimeSpan.FromSeconds(60)),
         Simulation.InjectPerSec(rate: 10, during: TimeSpan.FromSeconds(30)),
         Simulation.InjectPerSecRandom(minRate: 100, maxRate: 200, during: TimeSpan.FromSeconds(10))
     })
@@ -91,7 +91,7 @@ async Task CreateBucket()
     if (cluster != null)
     {
         await cluster.Buckets.DropBucketAsync("PerfTesting");
-
+        await Task.Delay(5000);
         var bucketSettings = new BucketSettings
         {
             Name = bucketName, 
@@ -100,6 +100,7 @@ async Task CreateBucket()
         };
 
         await cluster.Buckets.CreateBucketAsync(bucketSettings);
+        await Task.Delay(5000);
         _bucket = await cluster.BucketAsync(bucketName);
         _collection = await _bucket.DefaultCollectionAsync();
     }
