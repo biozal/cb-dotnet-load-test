@@ -25,33 +25,33 @@ var json = sb.ToString();
 
 //create step to simulate
 var step = Step.Create(
-    "Couchbase Upsert", 
-    timeout: TimeSpan.FromMilliseconds(1000), 
+    "Couchbase Upsert",
+    timeout: TimeSpan.FromMilliseconds(1000),
     execute: async context =>
 {
-    try
+try
+{
+    if (_cluster == null || _collection == null)
     {
-        if (_cluster == null || _collection == null) 
-	    {
-            return Response.Fail();
-        }
-        else if (_collection != null)
-        {
-            await PopuplateDatabase(json, _collection);
-        }
-    } 
-    catch (System.Exception ex) 
-    {
-        context.Logger.Error($"{ex.Message} - {ex.StackTrace}");
-
-        //try to recover from failure
-        _cluster.Dispose();
-        _cluster = null;
-        _cluster = await CreateCluster();
-
         return Response.Fail();
     }
-    return Response.Ok();
+    else if (_collection != null)
+    {
+        await PopuplateDatabase(json, _collection);
+    }
+}
+catch (System.Exception ex)
+{
+    context.Logger.Error($"{ex.Message} - {ex.StackTrace}");
+
+    //try to recover from failure
+    _cluster.Dispose();
+    _cluster = null;
+    _cluster = await CreateCluster();
+
+    return Response.Fail();
+}
+return Response.Ok(sizeBytes: System.Text.ASCIIEncoding.Unicode.GetByteCount(json));
 });
 
 //build Scenario to run
@@ -61,7 +61,7 @@ var scenario = ScenarioBuilder
         Simulation.RampConstant(copies: 1000, during: TimeSpan.FromSeconds(10)),
         Simulation.KeepConstant(copies: 1001, during: TimeSpan.FromSeconds(10)),
         Simulation.InjectPerSec(rate: 100, during: TimeSpan.FromSeconds(10)),
-        Simulation.InjectPerSecRandom(minRate: 1002, maxRate: 1300, during: TimeSpan.FromSeconds(40))
+        Simulation.InjectPerSecRandom(minRate: 400, maxRate: 800, during: TimeSpan.FromSeconds(40))
     })
     .WithInit(async context => { await CreateBucket(); });
 
