@@ -83,6 +83,7 @@ var step = Step.Create(
     }
 
     return Response.Ok(statusCode: 200, sizeBytes: System.Text.ASCIIEncoding.Unicode.GetByteCount(json));
+
 });
 
 //build Scenario to run
@@ -134,12 +135,13 @@ async Task<ICluster> CreateCluster()
     //setup database connection
     var cluster = await Cluster.ConnectAsync("couchbase://localhost", options =>
     {
-        options.WithCredentials("Administrator", "password");
+        options.WithCredentials("Administrator", "P@$$w0rd12");
         options.NumKvConnections = 4;
         options.MaxKvConnections = 8;
 
-        // this is now the default as of 3.3.0
+        // this is now th default as of 3.3.0
         options.Experiments.ChannelConnectionPools = true;
+
         options.WithTracing(new Couchbase.Core.Diagnostics.Tracing.TracingOptions() { Enabled = false });
         options.TracingOptions.WithTracer(new OpenTelemetryRequestTracer());
         options.WithLoggingMeterOptions(new Couchbase.Core.Diagnostics.Metrics.LoggingMeterOptions().Enabled(false));
@@ -148,7 +150,7 @@ async Task<ICluster> CreateCluster()
         options.Transcoder = new RawJsonTranscoder();
         options.Tuning = new TuningOptions
         {
-            MaximumRetainedOperationBuilders = Environment.ProcessorCount * 16
+            MaximumRetainedOperationBuilders = Environment.ProcessorCount * 4  
         };
 
         // Setting this value higher will allow more operations to be queued.
