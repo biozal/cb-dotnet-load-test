@@ -52,10 +52,10 @@ return Response.Ok(sizeBytes: System.Text.ASCIIEncoding.Unicode.GetByteCount(jso
 var scenario = ScenarioBuilder
     .CreateScenario("Test Couchbase", step)
     .WithLoadSimulations(new[] {
-        Simulation.RampConstant(copies: 1000, during: TimeSpan.FromSeconds(10)),
-        Simulation.KeepConstant(copies: 1001, during: TimeSpan.FromSeconds(20)),
-        Simulation.InjectPerSec(rate: 100, during: TimeSpan.FromSeconds(10)),
-        Simulation.InjectPerSecRandom(minRate: 400, maxRate: 800, during: TimeSpan.FromSeconds(40))
+        Simulation.RampConstant(copies: 400, during: TimeSpan.FromSeconds(10)),
+        Simulation.KeepConstant(copies: 600, during: TimeSpan.FromSeconds(10)),
+        Simulation.InjectPerSec(rate: 600, during: TimeSpan.FromSeconds(10)),
+        Simulation.InjectPerSecRandom(minRate: 700, maxRate: 800, during: TimeSpan.FromSeconds(120))
     })
     .WithInit(async context => { await CreateBucket(); });
 
@@ -81,9 +81,9 @@ async Task<ICluster> CreateCluster()
     //setup database connection
     var cluster = await Cluster.ConnectAsync("couchbase://localhost", options =>
     {
-        options.WithCredentials("Administrator", "password");
+        options.WithCredentials("Administrator", "P@$$w0rd12");
         options.NumKvConnections = 4;
-        options.MaxKvConnections = 4;
+        options.MaxKvConnections = 8;
         options.Experiments.ChannelConnectionPools = false;
         options.WithTracing(new Couchbase.Core.Diagnostics.Tracing.TracingOptions() { Enabled = false });
         options.WithLoggingMeterOptions(new Couchbase.Core.Diagnostics.Metrics.LoggingMeterOptions().Enabled(false));
@@ -92,7 +92,7 @@ async Task<ICluster> CreateCluster()
         options.Transcoder = new RawJsonTranscoder();
         options.Tuning = new TuningOptions
         {
-            MaximumRetainedOperationBuilders = Environment.ProcessorCount * 16
+            MaximumRetainedOperationBuilders = Environment.ProcessorCount * 4  
         };
     });
 
