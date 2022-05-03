@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -13,7 +13,15 @@
     <None Remove="CouchbaseNetClient" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="NBomber" Version="2.1.5" />
-    <PackageReference Include="CouchbaseNetClient" Version="3.2.9" />
+  <PackageReference Include="NBomber" Version="2.1.5" />
+  <PackageReference Include="OpenTelemetry.Exporter.Jaeger" Version="1.1.0" />
+	<PackageReference Include="Serilog.Extensions.Logging" Version="3.1.0" />
+	<PackageReference Include="Serilog.Sinks.Console" Version="4.0.1" />
+	<PackageReference Include="Serilog.Sinks.File" Version="4.1.0" />
+  <PackageReference Include="CouchbaseNetClient" Version="3.2.9" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\couchbase-net-client\src\Couchbase.Extensions.OpenTelemetry\Couchbase.Extensions.OpenTelemetry.csproj" />
+    <ProjectReference Include="..\..\..\couchbase-net-client\src\Couchbase\Couchbase.csproj" />
   </ItemGroup>
 </Project>
