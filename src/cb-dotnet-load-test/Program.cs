@@ -43,12 +43,6 @@ try
 catch (System.Exception ex)
 {
     context.Logger.Error($"{ex.Message} - {ex.StackTrace}");
-
-    //try to recover from failure
-    _cluster.Dispose();
-    _cluster = null;
-    _cluster = await CreateCluster();
-
     return Response.Fail();
 }
 return Response.Ok(sizeBytes: System.Text.ASCIIEncoding.Unicode.GetByteCount(json));
