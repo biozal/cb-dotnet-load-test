@@ -42,7 +42,7 @@ var json = sb.ToString();
 
 // If you continually throw requests in parallel, you will eventually exceed the rate at which operations can actually be dispatched.
 // Setting this value lower will protect against SendQueueFull problems under sustained load, but will put an upper limit on the maximum ops/sec.
-var maxOpsInFlight = new SemaphoreSlim(120);
+var maxOpsInFlight = new SemaphoreSlim(128);
 
 //create step to simulate
 var step = Step.Create(
@@ -67,7 +67,7 @@ var step = Step.Create(
         context.Logger.Error($"SendQueueFull: {ex.Message}");
 
         // if the send queue is full, back off a bit
-        await Task.Delay(100);
+        await Task.Delay(200);
 
         return Response.Fail(ex, statusCode: (int)HttpStatusCode.ServiceUnavailable);
     }
@@ -135,8 +135,8 @@ async Task<ICluster> CreateCluster()
     var cluster = await Cluster.ConnectAsync("couchbase://localhost", options =>
     {
         options.WithCredentials("Administrator", "P@$$w0rd12");
-        options.NumKvConnections = 8;
-        options.MaxKvConnections = 12;
+        options.NumKvConnections = 32;
+        options.MaxKvConnections = 64;
 
         // this is now th default as of 3.3.0
         options.Experiments.ChannelConnectionPools = true;
@@ -154,7 +154,7 @@ async Task<ICluster> CreateCluster()
 
         // Setting this value higher will allow more operations to be queued.
         // This allows higher parallelism for sustained durations at the expense of more memory use when the queue is being used.
-        options.KvSendQueueCapacity = 4096;
+        options.KvSendQueueCapacity = 8096;
 
         Serilog.Log.Logger = new Serilog.LoggerConfiguration()
         .Enrich.FromLogContext()
