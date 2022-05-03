@@ -42,7 +42,7 @@ var json = sb.ToString();
 
 // If you continually throw requests in parallel, you will eventually exceed the rate at which operations can actually be dispatched.
 // Setting this value lower will protect against SendQueueFull problems under sustained load, but will put an upper limit on the maximum ops/sec.
-var maxOpsInFlight = new SemaphoreSlim(200);
+var maxOpsInFlight = new SemaphoreSlim(120);
 
 //create step to simulate
 var step = Step.Create(
@@ -90,10 +90,10 @@ var step = Step.Create(
 var scenario = ScenarioBuilder
     .CreateScenario("Test Couchbase", step)
     .WithLoadSimulations(new[] {
-        Simulation.RampConstant(copies: 1000, during: TimeSpan.FromSeconds(10)),
-        Simulation.KeepConstant(copies: 2001, during: TimeSpan.FromSeconds(20)),
-        Simulation.InjectPerSec(rate: 100, during: TimeSpan.FromSeconds(10)),
-        Simulation.InjectPerSecRandom(minRate: 400, maxRate: 800, during: TimeSpan.FromSeconds(40))
+        Simulation.RampConstant(copies: 300, during: TimeSpan.FromSeconds(10)),
+        Simulation.KeepConstant(copies: 900, during: TimeSpan.FromSeconds(20)),
+        Simulation.InjectPerSec(rate: 700, during: TimeSpan.FromSeconds(10)),
+        Simulation.InjectPerSecRandom(minRate: 500, maxRate: 900, during: TimeSpan.FromSeconds(120))
     })
     .WithInit(async context => { await CreateBucket(); });
 
@@ -118,7 +118,6 @@ async Task PopuplateDatabase(string json, ICouchbaseCollection collection)
     await collection.UpsertAsync($"{System.Guid.NewGuid()}", json);
 }
 
-
 //init cluster
 async Task<ICluster> CreateCluster()
 {
@@ -136,8 +135,8 @@ async Task<ICluster> CreateCluster()
     var cluster = await Cluster.ConnectAsync("couchbase://localhost", options =>
     {
         options.WithCredentials("Administrator", "P@$$w0rd12");
-        options.NumKvConnections = 4;
-        options.MaxKvConnections = 8;
+        options.NumKvConnections = 8;
+        options.MaxKvConnections = 12;
 
         // this is now th default as of 3.3.0
         options.Experiments.ChannelConnectionPools = true;
@@ -155,7 +154,7 @@ async Task<ICluster> CreateCluster()
 
         // Setting this value higher will allow more operations to be queued.
         // This allows higher parallelism for sustained durations at the expense of more memory use when the queue is being used.
-        options.KvSendQueueCapacity = 2048;
+        options.KvSendQueueCapacity = 4096;
 
         Serilog.Log.Logger = new Serilog.LoggerConfiguration()
         .Enrich.FromLogContext()
